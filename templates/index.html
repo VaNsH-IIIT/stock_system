@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stock Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #f9f9f9;
+            color: #333;
+            padding: 30px;
+            margin: 0;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 2rem;
+        }
+
+        form {
+            background: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            max-width: 500px;
+        }
+
+        label {
+            font-weight: 600;
+            display: block;
+            margin-top: 10px;
+        }
+
+        input, select, button {
+            padding: 10px;
+            margin-top: 5px;
+            width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        #scanner-container {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 500px;
+            height: 300px;
+            border: 2px dashed #aaa;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: #fafafa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #interactive {
+            width: 100%;
+            height: 100%;
+        }
+
+        #interactive video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+
+        #scanner-message, #message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        #scanner-message {
+            background-color: #eef1fa;
+            color: #2d3e50;
+        }
+
+        #message {
+            background-color: #e0ffe0;
+            color: #006400;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 15px;
+            }
+
+            form, #scanner-container {
+                width: 100%;
+            }
+
+            #scanner-container {
+                height: 240px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            table, th, td {
+                font-size: 0.9rem;
+            }
+
+            button {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>📦 Stock Management System</h1>
+
+    {% if message %}
+        <div id="message">{{ message }}</div>
+    {% endif %}
+
+    <form method="POST">
+        <label>Barcode:</label>
+        <input type="text" name="barcode" id="barcode" required>
+
+        <label>Quantity:</label>
+        <input type="number" name="quantity" value="1" min="1" required>
+
+        <label>Action:</label>
+        <select name="action">
+            <option value="in">Stock In</option>
+            <option value="out">Stock Out</option>
+        </select>
+
+        <button type="submit">Update Stock</button>
+    </form>
+
+    <button onclick="startScanner()">📷 Start Camera Scan</button>
+
+    <div id="scanner-container">
+        <div id="interactive" class="viewport"></div>
+    </div>
+
+    <div id="scanner-message">Scanner not started yet.</div>
+
+    <h2>📋 Current Stock</h2>
+    <table>
+        <tr><th>Name</th><th>Barcode</th><th>Quantity</th></tr>
+        {% for item in stock %}
+        <tr>
+            <td>{{ item['name'] }}</td>
+            <td>{{ item['barcode'] }}</td>
+            <td>{{ item['quantity'] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <script src="{{ url_for('static', filename='quagga.min.js') }}"></script>
+    <script>
+        function startScanner() {
+            const scannerMsg = document.getElementById('scanner-message');
+            scannerMsg.innerText = "🔍 Scanner started. Point a barcode at the camera...";
+
+            Quagga.init({
+                inputStream: {
+                    type: "LiveStream",
+                    constraints: {
+                        facingMode: "environment",
+                        width: { ideal: 400 },
+                        height: { ideal: 300 }
+                    },
+                    target: document.querySelector('#interactive')
+                },
+                decoder: {
+                    readers: ["code_128_reader", "ean_reader", "ean_8_reader"]
+                }
+            }, function(err) {
+                if (err) {
+                    console.error(err);
+                    alert("Error starting camera");
+                    return;
+                }
+                Quagga.start();
+            });
+
+            Quagga.onDetected(function(result) {
+                const code = result.codeResult.code;
+                document.getElementById('barcode').value = code;
+                scannerMsg.innerText = `✅ Detected barcode: ${code}`;
+                Quagga.stop();
+            });
+        }
+    </script>
+</body>
+</html>
